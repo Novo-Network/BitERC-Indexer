@@ -1,0 +1,30 @@
+[package]
+edition = "2021"
+name = "rt-evm-storage"
+version = "0.1.0"
+
+[dependencies]
+ruc = { workspace = true }
+parking_lot = { workspace = true }
+rayon = { workspace = true }
+
+moka = { workspace = true }
+serde = { workspace = true }
+
+vsdb = { workspace = true }
+vsdb_trie_db = { workspace = true }
+
+rt-evm-model = { workspace = true }
+ethabi = { workspace = true }
+
+bitcoin = { workspace = true }
+
+[dev-dependencies]
+
+[features]
+default = ["vsdb_bcs_codec"]
+benchmark = []
+
+vsdb_bcs_codec = ["vsdb/bcs_codec"]
+vsdb_json_codec = ["vsdb/json_codec"]
+vsdb_msgpack_codec = ["vsdb/msgpack_codec"]

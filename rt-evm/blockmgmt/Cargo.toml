@@ -1,0 +1,19 @@
+[package]
+name = "rt-evm-blockmgmt"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ruc = { workspace = true }
+rayon = { workspace = true }
+
+rt-evm-mempool = { workspace = true }
+rt-evm-executor = { workspace = true }
+rt-evm-storage = { workspace = true }
+rt-evm-model = { workspace = true }
+
+[dev-dependencies]
+
+[features]
+default = []
+benchmark = []

@@ -1,0 +1,28 @@
+[package]
+name = "rt-evm-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+beef = { workspace = true }
+tokio = { workspace = true }
+jsonrpsee = { workspace = true }
+
+ruc = { workspace = true }
+once_cell = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+rt-evm-model = { workspace = true }
+rt-evm-executor = { workspace = true }
+rt-evm-mempool = { workspace = true }
+rt-evm-storage = { workspace = true }
+
+[dev-dependencies]
+fastrand = "1.8"
+json = "0.12"
+
+[features]
+default = []
+benchmark = []

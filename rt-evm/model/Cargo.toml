@@ -1,0 +1,27 @@
+[package]
+name = "rt-evm-model"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ruc = { workspace = true }
+arc-swap = { workspace = true }
+async-trait = { workspace = true }
+bcs = { workspace = true }
+bytes = { workspace = true }
+derive_more = { workspace = true }
+ethereum = { workspace = true }
+ethereum-types = { workspace = true }
+evm = { workspace = true }
+faster-hex = { workspace = true }
+ophelia = { workspace = true }
+ophelia-secp256k1 = { workspace = true }
+rlp = { workspace = true }
+rlp-derive = { workspace = true }
+serde = { workspace = true }
+once_cell = { workspace = true }
+bitcoin = { workspace = true }
+
+rt-evm-crypto = { workspace = true }
+
+[dev-dependencies]
