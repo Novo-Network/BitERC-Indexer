@@ -92,14 +92,17 @@ impl Args {
             if let Ok(Some(block)) = fetcher.get_block().await {
                 let mut txs = vec![];
                 for btc_tx in block.txdata.iter() {
-                    if let Ok(evm_txs) = fetcher.decode_transaction(btc_tx).await {
-                        if !evm_txs.is_empty() {
-                            for i in evm_txs.iter() {
-                                if let Ok(_) = evm_rt.check_signed_tx(i) {
-                                    txs.push(i.clone());
+                    match fetcher.decode_transaction(btc_tx).await {
+                        Ok(evm_txs) => {
+                            if !evm_txs.is_empty() {
+                                for i in evm_txs.iter() {
+                                    if let Ok(_) = evm_rt.check_signed_tx(i) {
+                                        txs.push(i.clone());
+                                    }
                                 }
                             }
                         }
+                        Err(e) => log::debug!("decode_transaction error:{}", e),
                     }
                 }
                 log::debug!("execute transaction:{:#?}", txs);

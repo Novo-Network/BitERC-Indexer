@@ -1,6 +1,6 @@
 #!/bin/bash
 set -xe
-export RUST_LOG=info
+export RUST_LOG=debug
 export RUST_BACKTRACE=full
 
 cargo r --bin novolited -- \

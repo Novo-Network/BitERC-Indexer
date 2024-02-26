@@ -65,6 +65,7 @@ impl DAService for GreenfieldService {
 
     async fn get_tx(&self, hash: &[u8]) -> Result<Vec<u8>> {
         let key = hex::encode(&hash);
+        println!("get tx");
         let file_name = format!("/tmp/{}", key);
 
         //gnfd-cmd --rpcAddr "https://gnfd-testnet-fullnode-tendermint-us.bnbchain.org:443" --chainId "greenfield_5600-1" object get gnfd://bucket123123123/test1.txt ./test-copy.txt
@@ -81,10 +82,10 @@ impl DAService for GreenfieldService {
             .arg(file_name.clone());
         let output = cmd.output()?;
         let show = String::from_utf8(output.stdout)?;
+        println!("{}", show);
         if !output.status.success() {
             return Err(anyhow!(show));
         }
-        println!("{}", show);
 
         let file_content = fs::read_to_string(&file_name)?;
         let content = hex::decode(file_content)?;

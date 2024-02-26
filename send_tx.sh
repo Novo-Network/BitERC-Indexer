@@ -6,7 +6,7 @@ export RUST_BACKTRACE=full
 
 cargo r --bin novolite -- \
   --config=./config.toml \
-  --txid="0029884014e7c9eb6de015441caa31bfe184b9765bfee09437aacd65bb9b3226" \
+  --txid="5dc9086c2276a6df96ee145bd584a8769cbb752e796647f9fab7c99d89ebf6f7" \
   --vout=0 \
   --private-key="0x24e196d2883a86132d43f793dd6ffd0c11a456afba1c1c3180674b6f0624cace" \
   --value=0 \

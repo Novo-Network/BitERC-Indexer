@@ -33,9 +33,18 @@ impl BtcTransactionBuilder {
         Ok(Self { client })
     }
     pub async fn get_eth_from_address(&self, txid: &Txid, vout: u32) -> Result<H160> {
-        let unspent = self.client.get_tx_out(&txid, vout, None).c(d!())?.c(d!())?;
+        let script = self
+            .client
+            .get_raw_transaction(&txid, None)
+            .c(d!())
+            .and_then(|tx| {
+                tx.output
+                    .get(vout as usize)
+                    .map(|v| v.script_pubkey.clone())
+                    .ok_or(eg!("utxo not fount {:?}", txid))
+            })?;
+
         let mut hasher = sha256::HashEngine::default();
-        let script = unspent.script_pub_key.script().c(d!())?;
         let data = if script.is_p2pk() || script.is_p2pkh() {
             script.p2pk_public_key().c(d!())?.to_bytes()
         } else if script.is_p2wpkh() {
