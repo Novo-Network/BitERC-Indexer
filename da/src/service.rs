@@ -34,12 +34,8 @@ impl DAServiceManager {
             default: 0,
         }
     }
-    pub fn contains(&self, ty: u8) -> bool {
-        self.service
-            .keys()
-            .cloned()
-            .collect::<Vec<u8>>()
-            .contains(&ty)
+    pub fn types(&self) -> Vec<u8> {
+        self.service.keys().cloned().collect::<Vec<u8>>()
     }
 
     pub fn default_type(&self) -> u8 {

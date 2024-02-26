@@ -42,7 +42,7 @@ impl Executor for RTEvmExecutor {
     // Used for query data API, this function will not modify the world state.
     fn call<B: Backend>(
         &self,
-        backend: &B,
+        mut backend: &B,
         gas_limit: u64,
         from: Option<H160>,
         to: Option<H160>,
@@ -50,8 +50,9 @@ impl Executor for RTEvmExecutor {
         data: Vec<u8>,
     ) -> TxResp {
         let config = Config::london();
+        let gas_price = backend.gas_price();
         let metadata = StackSubstateMetadata::new(gas_limit, &config);
-        let state = MemoryStackState::new(metadata, backend);
+        let state = MemoryStackState::new(metadata, &mut backend);
         let precompiles = build_precompile_set();
         let mut executor = StackExecutor::new_with_precompiles(state, &config, &precompiles);
 
@@ -81,8 +82,7 @@ impl Executor for RTEvmExecutor {
             ret: res,
             remain_gas: executor.gas(),
             gas_used: used_gas,
-            fee_cost: backend
-                .gas_price()
+            fee_cost: gas_price
                 .checked_mul(used_gas.into())
                 .unwrap_or(U256::max_value()),
             logs: vec![],

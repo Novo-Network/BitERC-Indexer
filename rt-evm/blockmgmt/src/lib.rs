@@ -11,10 +11,11 @@ use rt_evm_model::{
     traits::{BlockStorage as _, Executor as _, TxStorage as _},
     types::{
         Block, ExecResp, ExecutorContext, FatBlock, FatBlockRef, Hash, Header, MerkleRoot,
-        Proposal, Receipt, SignedTransaction, BASE_FEE_PER_GAS, H160, MAX_BLOCK_GAS_LIMIT, U256,
+        Proposal, Receipt, SignedTransaction, UnsignedTransaction, BASE_FEE_PER_GAS, H160,
+        MAX_BLOCK_GAS_LIMIT, U256,
     },
 };
-use rt_evm_storage::{MptStore, Storage};
+use rt_evm_storage::{get_account_by_backend, MptStore, Storage};
 use ruc::*;
 use std::sync::Arc;
 
@@ -63,7 +64,14 @@ impl BlockMgmt {
     }
 
     /// generate a new block and persist it
-    pub fn produce_block(&self, txs: Vec<SignedTransaction>) -> Result<Header> {
+    pub fn produce_block(&self, mut txs: Vec<SignedTransaction>) -> Result<Header> {
+        for it in txs.iter_mut() {
+            if let UnsignedTransaction::Deposit(ref mut tx) = it.transaction.unsigned {
+                let account =
+                    get_account_by_backend(&self.trie, &self.storage, tx.from, None).c(d!())?;
+                tx.nonce = account.nonce;
+            }
+        }
         let (block, receipts) = self.generate_block(&txs).c(d!())?;
         let header = block.header.clone();
 

@@ -6,9 +6,9 @@ use rt_evm_crypto::secp256k1_recover;
 
 use crate::lazy::CHAIN_ID;
 use crate::types::{
-    public_to_address, AccessList, AccessListItem, Bytes, Eip1559Transaction,
-    Eip2930Transaction, Hasher, LegacyTransaction, Public, SignatureComponents,
-    SignedTransaction, UnsignedTransaction, UnverifiedTransaction, H256, U256,
+    public_to_address, AccessList, AccessListItem, Bytes, DepositTransaction, Eip1559Transaction,
+    Eip2930Transaction, Hasher, LegacyTransaction, Public, SignatureComponents, SignedTransaction,
+    UnsignedTransaction, UnverifiedTransaction, H256, U256,
 };
 
 fn truncate_slice<T>(s: &[T], n: usize) -> &[T] {
@@ -31,11 +31,7 @@ impl Encodable for SignatureComponents {
 }
 
 impl SignatureComponents {
-    fn rlp_decode(
-        rlp: &Rlp,
-        offset: usize,
-        legacy_v: Option<u64>,
-    ) -> Result<Self, DecoderError> {
+    fn rlp_decode(rlp: &Rlp, offset: usize, legacy_v: Option<u64>) -> Result<Self, DecoderError> {
         let v: u8 = if let Some(n) = legacy_v {
             SignatureComponents::extract_standard_v(n)
                 .ok_or(DecoderError::Custom("invalid legacy v in signature"))?
@@ -125,8 +121,7 @@ impl LegacyTransaction {
         };
 
         let v: u64 = r.val_at(6)?;
-        let id = SignatureComponents::extract_chain_id(v)
-            .unwrap_or_else(|| **CHAIN_ID.load());
+        let id = SignatureComponents::extract_chain_id(v).unwrap_or_else(|| **CHAIN_ID.load());
 
         Ok(UnverifiedTransaction {
             unsigned: UnsignedTransaction::Legacy(tx),
@@ -205,6 +200,56 @@ impl Eip2930Transaction {
             unsigned: tx,
             signature: Some(SignatureComponents::rlp_decode(r, 8, None)?),
             chain_id: id,
+        })
+    }
+}
+
+impl DepositTransaction {
+    pub fn rlp_encode(&self, rlp: &mut RlpStream) {
+        rlp.begin_list(8)
+            .append(&self.source_hash)
+            .append(&self.from)
+            .append(&self.action)
+            .append(&self.mint)
+            .append(&self.value)
+            .append(&self.gas_limit)
+            .append(&self.is_system_tx)
+            .append(&self.data);
+    }
+
+    pub fn rlp_decode(r: &Rlp) -> Result<UnverifiedTransaction, DecoderError> {
+        if r.item_count()? != 8 {
+            return Err(DecoderError::RlpIncorrectListLen);
+        }
+
+        let tx = UnsignedTransaction::Deposit(DepositTransaction {
+            nonce: Default::default(),
+            source_hash: r.val_at(0)?,
+            from: r.val_at(1)?,
+            action: r.val_at(2)?,
+            mint: {
+                let to = r.at(3)?;
+                if to.is_empty() {
+                    if to.is_data() {
+                        None
+                    } else {
+                        return Err(rlp::DecoderError::RlpExpectedToBeData);
+                    }
+                } else {
+                    Some(to.as_val()?)
+                }
+            },
+            value: r.val_at(4)?,
+            gas_limit: r.val_at(5)?,
+            is_system_tx: r.val_at(6)?,
+            data: r.val_at(7)?,
+        });
+
+        Ok(UnverifiedTransaction {
+            hash: Hasher::digest([&[tx.as_u8()], r.as_raw()].concat()),
+            unsigned: tx,
+            signature: None,
+            chain_id: 0,
         })
     }
 }
@@ -288,15 +333,10 @@ impl Encodable for UnverifiedTransaction {
         let chain_id = Some(self.chain_id);
 
         match &self.unsigned {
-            UnsignedTransaction::Legacy(tx) => {
-                tx.rlp_encode(s, chain_id, self.signature.as_ref())
-            }
-            UnsignedTransaction::Eip2930(tx) => {
-                tx.rlp_encode(s, chain_id, self.signature.as_ref())
-            }
-            UnsignedTransaction::Eip1559(tx) => {
-                tx.rlp_encode(s, chain_id, self.signature.as_ref())
-            }
+            UnsignedTransaction::Legacy(tx) => tx.rlp_encode(s, chain_id, self.signature.as_ref()),
+            UnsignedTransaction::Eip2930(tx) => tx.rlp_encode(s, chain_id, self.signature.as_ref()),
+            UnsignedTransaction::Eip1559(tx) => tx.rlp_encode(s, chain_id, self.signature.as_ref()),
+            UnsignedTransaction::Deposit(tx) => tx.rlp_encode(s),
         };
     }
 
@@ -326,6 +366,7 @@ impl Decodable for UnverifiedTransaction {
         match header {
             0x01 => Eip2930Transaction::rlp_decode(&Rlp::new(&raw[1..])),
             0x02 => Eip1559Transaction::rlp_decode(&Rlp::new(&raw[1..])),
+            0x7e => DepositTransaction::rlp_decode(&Rlp::new(&raw[1..])),
             _ => Err(DecoderError::Custom("Invalid transaction header")),
         }
     }

@@ -1,7 +1,7 @@
 use crate::types::{Bytes, Hash, Hasher, Public, TypesError, H160, H256, H520, U256};
 pub use ethereum::{
-    AccessList, AccessListItem, EIP1559TransactionMessage as TransactionMessage,
-    TransactionAction, TransactionRecoveryId, TransactionSignature,
+    AccessList, AccessListItem, EIP1559TransactionMessage as TransactionMessage, TransactionAction,
+    TransactionRecoveryId, TransactionSignature,
 };
 use rlp::{Encodable, RlpStream};
 use rt_evm_crypto::secp256k1_recover;
@@ -21,6 +21,7 @@ pub enum UnsignedTransaction {
     Legacy(LegacyTransaction),
     Eip2930(Eip2930Transaction),
     Eip1559(Eip1559Transaction),
+    Deposit(DepositTransaction),
 }
 
 impl UnsignedTransaction {
@@ -29,6 +30,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(_) => 0x00,
             UnsignedTransaction::Eip2930(_) => 0x01,
             UnsignedTransaction::Eip1559(_) => 0x02,
+            UnsignedTransaction::Deposit(_) => 0x7e,
         }
     }
 
@@ -59,11 +61,16 @@ impl UnsignedTransaction {
         matches!(self, UnsignedTransaction::Eip1559(_))
     }
 
+    pub fn is_deposit(&self) -> bool {
+        matches!(self, UnsignedTransaction::Deposit(_))
+    }
+
     pub fn data(&self) -> &[u8] {
         match self {
             UnsignedTransaction::Legacy(tx) => tx.data.as_ref(),
             UnsignedTransaction::Eip2930(tx) => tx.data.as_ref(),
             UnsignedTransaction::Eip1559(tx) => tx.data.as_ref(),
+            UnsignedTransaction::Deposit(tx) => tx.data.as_ref(),
         }
     }
 
@@ -72,6 +79,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(tx) => tx.action = action,
             UnsignedTransaction::Eip2930(tx) => tx.action = action,
             UnsignedTransaction::Eip1559(tx) => tx.action = action,
+            UnsignedTransaction::Deposit(tx) => tx.action = action,
         }
     }
 
@@ -80,6 +88,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(tx) => tx.data = data,
             UnsignedTransaction::Eip2930(tx) => tx.data = data,
             UnsignedTransaction::Eip1559(tx) => tx.data = data,
+            UnsignedTransaction::Deposit(tx) => tx.data = data,
         }
     }
 
@@ -87,17 +96,17 @@ impl UnsignedTransaction {
         match self {
             UnsignedTransaction::Legacy(tx) => tx.gas_price,
             UnsignedTransaction::Eip2930(tx) => tx.gas_price,
-            UnsignedTransaction::Eip1559(tx) => {
-                tx.gas_price.min(tx.max_priority_fee_per_gas)
-            }
+            UnsignedTransaction::Eip1559(tx) => tx.gas_price.min(tx.max_priority_fee_per_gas),
+            UnsignedTransaction::Deposit(_) => U256::from(MIN_GAS_PRICE),
         }
     }
 
-    pub fn max_priority_fee_per_gas(&self) -> &U256 {
+    pub fn max_priority_fee_per_gas(&self) -> U256 {
         match self {
-            UnsignedTransaction::Legacy(tx) => &tx.gas_price,
-            UnsignedTransaction::Eip2930(tx) => &tx.gas_price,
-            UnsignedTransaction::Eip1559(tx) => &tx.max_priority_fee_per_gas,
+            UnsignedTransaction::Legacy(tx) => tx.gas_price,
+            UnsignedTransaction::Eip2930(tx) => tx.gas_price,
+            UnsignedTransaction::Eip1559(tx) => tx.max_priority_fee_per_gas,
+            UnsignedTransaction::Deposit(_) => U256::from(MIN_GAS_PRICE),
         }
     }
 
@@ -113,14 +122,11 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(_) => unreachable!(),
             UnsignedTransaction::Eip2930(_) => 1u8,
             UnsignedTransaction::Eip1559(_) => 2u8,
+            UnsignedTransaction::Deposit(_) => 3u8,
         }
     }
 
-    pub fn encode(
-        &self,
-        chain_id: u64,
-        signature: Option<SignatureComponents>,
-    ) -> Bytes {
+    pub fn encode(&self, chain_id: u64, signature: Option<SignatureComponents>) -> Bytes {
         UnverifiedTransaction {
             unsigned: self.clone(),
             chain_id,
@@ -136,6 +142,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(tx) => tx.get_to(),
             UnsignedTransaction::Eip2930(tx) => tx.get_to(),
             UnsignedTransaction::Eip1559(tx) => tx.get_to(),
+            UnsignedTransaction::Deposit(tx) => tx.get_to(),
         }
     }
 
@@ -144,6 +151,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(tx) => &tx.value,
             UnsignedTransaction::Eip2930(tx) => &tx.value,
             UnsignedTransaction::Eip1559(tx) => &tx.value,
+            UnsignedTransaction::Deposit(tx) => &tx.value,
         }
     }
 
@@ -152,6 +160,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(tx) => &tx.gas_limit,
             UnsignedTransaction::Eip2930(tx) => &tx.gas_limit,
             UnsignedTransaction::Eip1559(tx) => &tx.gas_limit,
+            UnsignedTransaction::Deposit(tx) => &tx.gas_limit,
         }
     }
 
@@ -160,6 +169,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(tx) => &tx.nonce,
             UnsignedTransaction::Eip2930(tx) => &tx.nonce,
             UnsignedTransaction::Eip1559(tx) => &tx.nonce,
+            UnsignedTransaction::Deposit(tx) => &tx.nonce,
         }
     }
 
@@ -168,6 +178,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(tx) => &tx.action,
             UnsignedTransaction::Eip2930(tx) => &tx.action,
             UnsignedTransaction::Eip1559(tx) => &tx.action,
+            UnsignedTransaction::Deposit(tx) => &tx.action,
         }
     }
 
@@ -176,6 +187,7 @@ impl UnsignedTransaction {
             UnsignedTransaction::Legacy(_) => Vec::new(),
             UnsignedTransaction::Eip2930(tx) => tx.access_list.clone(),
             UnsignedTransaction::Eip1559(tx) => tx.access_list.clone(),
+            UnsignedTransaction::Deposit(_) => Vec::new(),
         }
     }
 }
@@ -280,6 +292,44 @@ impl std::hash::Hash for Eip1559Transaction {
 }
 
 impl Eip1559Transaction {
+    pub fn get_to(&self) -> Option<H160> {
+        match self.action {
+            TransactionAction::Call(to) => Some(to),
+            TransactionAction::Create => None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct DepositTransaction {
+    pub nonce: U256,
+    pub source_hash: H256,
+    pub from: H160,
+    pub action: TransactionAction,
+    pub mint: Option<U256>,
+    pub value: U256,
+    pub gas_limit: U256,
+    pub is_system_tx: bool,
+    pub data: Bytes,
+}
+
+impl std::hash::Hash for DepositTransaction {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.nonce.hash(state);
+        self.source_hash.hash(state);
+        self.from.hash(state);
+        self.mint.hash(state);
+        self.value.hash(state);
+        self.gas_limit.hash(state);
+        self.is_system_tx.hash(state);
+        self.data.hash(state);
+        if let TransactionAction::Call(addr) = self.action {
+            addr.hash(state);
+        }
+    }
+}
+
+impl DepositTransaction {
     pub fn get_to(&self) -> Option<H160> {
         match self.action {
             TransactionAction::Call(to) => Some(to),

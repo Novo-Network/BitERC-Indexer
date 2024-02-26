@@ -5,14 +5,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use rt_evm_model::codec::ProtocolCodec;
 use rt_evm_model::types::{
-    AccessList, Block, Bloom, Bytes, Hash, Header, Hex, Public, Receipt,
-    SignedTransaction, H160, H256, H64, MAX_PRIORITY_FEE_PER_GAS, U256, U64,
+    AccessList, Block, Bloom, Bytes, Hash, Header, Hex, Public, Receipt, SignedTransaction, H160,
+    H256, H64, MAX_PRIORITY_FEE_PER_GAS, U256, U64,
 };
 
 pub const EMPTY_UNCLE_HASH: H256 = H256([
-    0x1d, 0xcc, 0x4d, 0xe8, 0xde, 0xc7, 0x5d, 0x7a, 0xab, 0x85, 0xb5, 0x67, 0xb6, 0xcc,
-    0xd4, 0x1a, 0xd3, 0x12, 0x45, 0x1b, 0x94, 0x8a, 0x74, 0x13, 0xf0, 0xa1, 0x42, 0xfd,
-    0x40, 0xd4, 0x93, 0x47,
+    0x1d, 0xcc, 0x4d, 0xe8, 0xde, 0xc7, 0x5d, 0x7a, 0xab, 0x85, 0xb5, 0x67, 0xb6, 0xcc, 0xd4, 0x1a,
+    0xd3, 0x12, 0x45, 0x1b, 0x94, 0x8a, 0x74, 0x13, 0xf0, 0xa1, 0x42, 0xfd, 0x40, 0xd4, 0x93, 0x47,
 ]);
 
 #[allow(clippy::large_enum_variant)]
@@ -93,7 +92,7 @@ impl From<SignedTransaction> for Web3Transaction {
                 None
             },
             max_priority_fee_per_gas: if is_eip1559 {
-                Some(*stx.transaction.unsigned.max_priority_fee_per_gas())
+                Some(stx.transaction.unsigned.max_priority_fee_per_gas())
             } else {
                 None
             },
@@ -135,7 +134,7 @@ impl From<(SignedTransaction, Receipt)> for Web3Transaction {
                 None
             },
             max_priority_fee_per_gas: if is_eip1559 {
-                Some(*stx.transaction.unsigned.max_priority_fee_per_gas())
+                Some(stx.transaction.unsigned.max_priority_fee_per_gas())
             } else {
                 None
             },
@@ -334,6 +333,11 @@ pub struct Web3CallRequest {
     pub access_list: Option<AccessList>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_priority_fee_per_gas: Option<U256>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_system_tx: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_hash: Option<H256>,
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
@@ -402,10 +406,9 @@ impl<'a> Visitor<'a> for BlockIdVisitor {
                     "blockNumber" => {
                         let value: String = visitor.next_value()?;
                         if let Some(stripper) = value.strip_prefix("0x") {
-                            let number =
-                                u64::from_str_radix(stripper, 16).map_err(|e| {
-                                    Error::custom(format!("Invalid block number: {}", e))
-                                })?;
+                            let number = u64::from_str_radix(stripper, 16).map_err(|e| {
+                                Error::custom(format!("Invalid block number: {}", e))
+                            })?;
 
                             block_number = Some(number);
                             break;

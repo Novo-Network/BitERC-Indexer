@@ -174,6 +174,11 @@ impl<'a> Backend for RTEvmExecutorAdapter<'a> {
         // fixme
         Some(self.storage(address, index))
     }
+
+    #[doc = r" Get environmental block randomness."]
+    fn block_randomness(&self) -> Option<H256> {
+        todo!()
+    }
 }
 
 impl<'a> ApplyBackend for RTEvmExecutorAdapter<'a> {

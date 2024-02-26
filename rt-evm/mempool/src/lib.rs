@@ -275,9 +275,10 @@ impl TinyMempool {
         }
 
         let acc = self.get_account(tx.sender, None).c(d!())?;
-
-        if &acc.nonce > utx.unsigned.nonce() {
-            return Err(eg!("Invalid nonce"));
+        if !utx.unsigned.is_deposit() {
+            if &acc.nonce > utx.unsigned.nonce() {
+                return Err(eg!("Invalid nonce"));
+            }
         }
 
         if self.storage.get_tx_by_hash(&utx.hash).c(d!())?.is_some() {

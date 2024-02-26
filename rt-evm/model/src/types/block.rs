@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::codec::ProtocolCodec;
 use crate::types::{
-    Bloom, BloomInput, Bytes, ExecResp, Hash, Hasher, MerkleRoot, SignedTransaction,
-    H160, H64, NIL_HASH, U256,
+    Bloom, BloomInput, Bytes, ExecResp, Hash, Hasher, MerkleRoot, SignedTransaction, H160, H64,
+    NIL_HASH, U256,
 };
 
 pub type BlockNumber = u64;
@@ -81,15 +81,7 @@ pub struct PackedTxHashes {
 }
 
 #[derive(
-    RlpEncodable,
-    RlpDecodable,
-    Serialize,
-    Deserialize,
-    Default,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
+    RlpEncodable, RlpDecodable, Serialize, Deserialize, Default, Clone, Debug, PartialEq, Eq,
 )]
 pub struct Block {
     pub header: Header,
@@ -132,12 +124,7 @@ impl Block {
         Proposal::from(self).hash()
     }
 
-    pub fn mock(
-        chain_id: u64,
-        number: u64,
-        state_root: MerkleRoot,
-        timestamp: u64,
-    ) -> Self {
+    pub fn mock(chain_id: u64, number: u64, state_root: MerkleRoot, timestamp: u64) -> Self {
         let header = Header {
             prev_hash: Default::default(),
             proposer: Default::default(),
@@ -165,15 +152,7 @@ impl Block {
 }
 
 #[derive(
-    RlpEncodable,
-    RlpDecodable,
-    Serialize,
-    Deserialize,
-    Default,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
+    RlpEncodable, RlpDecodable, Serialize, Deserialize, Default, Clone, Debug, PartialEq, Eq,
 )]
 pub struct Header {
     pub prev_hash: Hash,
