@@ -47,8 +47,6 @@ impl BtcTransactionBuilder {
         let mut hasher = sha256::HashEngine::default();
         let data = if script.is_p2pk() || script.is_p2pkh() {
             script.p2pk_public_key().c(d!())?.to_bytes()
-        } else if script.is_p2wpkh() {
-            script.p2wpkh_script_code().c(d!())?.to_bytes()
         } else {
             script.as_bytes().to_vec()
         };
