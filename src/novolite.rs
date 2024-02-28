@@ -66,10 +66,10 @@ async fn main() -> Result<()> {
     let txid = Txid::from_str(&cmd.txid).c(d!())?;
     let from = btc_builder.get_eth_from_address(&txid, cmd.vout).await?;
     let eth_builder = EthTransactionBuilder::new(&cfg.eth_url, &cmd.private_key).await?;
-    let data = cmd
-        .data
-        .c(d!())
-        .and_then(|d| hex_decode(&d.strip_prefix("0x").unwrap_or(&d)).c(d!()))?;
+    let data = match cmd.data {
+        Some(v) => hex_decode(&v.strip_prefix("0x").unwrap_or(&v)).c(d!())?,
+        None => vec![],
+    };
     let sig = cmd.sig.clone().unwrap_or(String::new());
     let (eth_tx, mut fee) = eth_builder
         .build_transaction(from, cmd.value, cmd.to, &data, &sig, cmd.args)
