@@ -84,7 +84,7 @@ pub async fn create_da_mgr(
     if ipfs {
         let ipfs_url = ipfs_url.ok_or(anyhow!("ipfs url can not be empty"))?;
         let ipfs_service = IpfsService {
-            ipfs: Arc::new(IpfsClient::from_str(&ipfs_url)?),
+            ipfs: Arc::new(IpfsClient::from_str(ipfs_url)?),
         };
         if 1 == flag {
             da_mgr.add_default_service(ipfs_service);

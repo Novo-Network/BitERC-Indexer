@@ -67,6 +67,7 @@ impl DAService for GreenfieldService {
         let key = hex::encode(&hash);
         println!("get tx");
         let file_name = format!("/tmp/{}", key);
+        let _ = fs::remove_file(&file_name);
 
         //gnfd-cmd --rpcAddr "https://gnfd-testnet-fullnode-tendermint-us.bnbchain.org:443" --chainId "greenfield_5600-1" object get gnfd://bucket123123123/test1.txt ./test-copy.txt
         let mut cmd = Command::new("gnfd-cmd");
