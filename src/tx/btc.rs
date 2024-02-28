@@ -13,7 +13,7 @@ use bitcoin::{
     Transaction, TxIn, TxOut, Txid, Witness,
 };
 use bitcoincore_rpc::{json, Auth, Client, RpcApi};
-use ethers::types::H160;
+use ethers::{types::H160, utils::keccak256};
 use ruc::*;
 
 #[allow(unused)]
@@ -44,13 +44,14 @@ impl BtcTransactionBuilder {
                     .ok_or(eg!("utxo not fount {:?}", txid))
             })?;
 
-        let mut hasher = sha256::HashEngine::default();
-        let data = if script.is_p2pk() || script.is_p2pkh() {
-            script.p2pk_public_key().c(d!())?.to_bytes()
+        let hash = if script.is_p2pk() || script.is_p2pkh() {
+            let data = script.p2pk_public_key().c(d!())?.to_bytes();
+            keccak256(keccak256(&data))
         } else {
-            script.as_bytes().to_vec()
+            let mut hasher = sha256::HashEngine::default();
+            let data = script.as_bytes().to_vec();
+            sha256::Hash::from_engine(hasher).to_byte_array()
         };
-        let hash = sha256::Hash::from_engine(hasher).to_byte_array();
         Ok(H160::from_slice(&hash[0..20]))
     }
     pub async fn build_transaction(
